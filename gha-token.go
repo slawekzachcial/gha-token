@@ -1,22 +1,32 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	jwt "github.com/dgrijalva/jwt-go"
 	"io/ioutil"
-	"log"
-	"os"
+	logger "log"
+	"net/http"
 	"time"
 )
 
+type InstallationToken struct {
+	Token     string `json:"token"`
+	ExpiresAt string `json:"expires_at"`
+}
+
+var verbose bool
+
 func main() {
-	// apiUrlPtr := flag.String("apiUrl", "https://api.github.com", "GitHub API URL")
+	apiUrlPtr := flag.String("apiUrl", "https://api.github.com", "GitHub API URL")
 	appIdPtr := flag.Int("app", 0, "Appliction ID as defined in app settings")
 	keyPathPtr := flag.String("keyPath", "", "Path to key PEM file generated in app settings")
+	installIdPtr := flag.Int("inst", -1, "Installation ID of the application")
+	flag.BoolVar(&verbose, "v", false, "Verbose stderr")
 
 	flag.Parse()
-	// fmt.Printf("API: %s, App ID: %d, Key: %s\n", *apiUrlPtr, *appIdPtr, *keyPathPtr)
+	log("API: %s, App ID: %d, Key: %s\n", *apiUrlPtr, *appIdPtr, *keyPathPtr)
 
 	keyBytes, err := ioutil.ReadFile(*keyPathPtr)
 	handleErrorIfAny(err)
@@ -33,14 +43,44 @@ func main() {
 		"iss": *appIdPtr,
 	})
 
-	tokenString, err := token.SignedString(signKey)
+	jwtTokenString, err := token.SignedString(signKey)
+	handleErrorIfAny(err)
 
-	fmt.Println(tokenString)
+	if *installIdPtr == -1 {
+		log("Generated JWT token for app ID %d\n", *appIdPtr)
+		fmt.Print(jwtTokenString)
+	} else {
+		client := &http.Client{}
+
+		req, err := http.NewRequest("POST", fmt.Sprintf("%s/app/installations/%d/access_tokens", *apiUrlPtr, *installIdPtr), nil)
+		handleErrorIfAny(err)
+		req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", jwtTokenString))
+		req.Header.Add("Accept", "application/vnd.github.machine-man-preview+json")
+
+		resp, err := client.Do(req)
+		handleErrorIfAny(err)
+
+		defer resp.Body.Close()
+
+		respData, err := ioutil.ReadAll(resp.Body)
+		handleErrorIfAny(err)
+
+		var installationToken InstallationToken
+		json.Unmarshal(respData, &installationToken)
+
+		log("Generated installation token for app ID %d and installation ID %d that expires at %s\n", *appIdPtr, *installIdPtr, installationToken.ExpiresAt)
+		fmt.Print(installationToken.Token)
+	}
+}
+
+func log(format string, v ...interface{}) {
+	if verbose {
+		logger.Printf(format, v...)
+	}
 }
 
 func handleErrorIfAny(err error) {
 	if err != nil {
-		log.Fatal(err)
-		os.Exit(2)
+		logger.Fatalln(err)
 	}
 }
