@@ -35,6 +35,7 @@ type Repositories struct {
 }
 
 var verbose bool
+var veryVerbose bool
 
 func main() {
 	apiUrlPtr := flag.String("apiUrl", "https://api.github.com", "GitHub API URL")
@@ -43,9 +44,9 @@ func main() {
 	installIdPtr := flag.Int("inst", -1, "Installation ID of the application")
 	repoPtr := flag.String("repo", "", "{owner/repo} of the GitHub repository")
 	flag.BoolVar(&verbose, "v", false, "Verbose stderr")
+	flag.BoolVar(&veryVerbose, "vv", false, "Very verbose stderr")
 
 	flag.Parse()
-	log("API: %s, App ID: %d, Key: %s\n", *apiUrlPtr, *appIdPtr, *keyPathPtr)
 
 	jwtToken := jwtToken(*appIdPtr, *keyPathPtr)
 
@@ -101,7 +102,7 @@ func httpJson(method string, url string, authorization string, result interface{
 	req.Header.Add("Authorization", authorization)
 	req.Header.Add("Accept", "application/vnd.github.machine-man-preview+json")
 
-	log("GitHub request: %s", req)
+	debug("GitHub request: %s", req)
 
 	resp, err := client.Do(req)
 	handleErrorIfAny(err)
@@ -111,7 +112,7 @@ func httpJson(method string, url string, authorization string, result interface{
 	respData, err := ioutil.ReadAll(resp.Body)
 	handleErrorIfAny(err)
 
-	log("GitHub response: %s", respData)
+	debug("GitHub response: %s", respData)
 
 	json.Unmarshal(respData, &result)
 }
@@ -146,6 +147,12 @@ func installationTokenForRepo(apiUrl string, jwtToken string, appId int, owner s
 
 func log(format string, v ...interface{}) {
 	if verbose {
+		logger.Printf(format, v...)
+	}
+}
+
+func debug(format string, v ...interface{}) {
+	if veryVerbose {
 		logger.Printf(format, v...)
 	}
 }
