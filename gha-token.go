@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	logger "log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 )
@@ -39,14 +40,20 @@ var veryVerbose bool
 
 func main() {
 	apiUrlPtr := flag.String("apiUrl", "https://api.github.com", "GitHub API URL")
-	appIdPtr := flag.Int("app", 0, "Appliction ID as defined in app settings")
-	keyPathPtr := flag.String("keyPath", "", "Path to key PEM file generated in app settings")
+	appIdPtr := flag.Int("app", -1, "Appliction ID as defined in app settings. Required")
+	keyPathPtr := flag.String("keyPath", "", "Path to key PEM file generated in app settings. Required")
 	installIdPtr := flag.Int("inst", -1, "Installation ID of the application")
 	repoPtr := flag.String("repo", "", "{owner/repo} of the GitHub repository")
 	flag.BoolVar(&verbose, "v", false, "Verbose stderr")
 	flag.BoolVar(&veryVerbose, "vv", false, "Very verbose stderr")
 
 	flag.Parse()
+
+	if *appIdPtr == -1 || *keyPathPtr == "" {
+		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
+		flag.PrintDefaults()
+		os.Exit(1)
+	}
 
 	jwtToken := jwtToken(*appIdPtr, *keyPathPtr)
 
