@@ -24,13 +24,6 @@ type installation struct {
 	RepositoriesURL string `json:"repositories_url"`
 }
 
-// type Repository struct {
-// 	Name  string `json:"name"`
-// 	Owner struct {
-// 		Login string `json:"login"`
-// 	} `json:"owner"`
-// }
-
 type repositories struct {
 	List []struct {
 		Name  string `json:"name"`
@@ -38,7 +31,6 @@ type repositories struct {
 			Login string `json:"login"`
 		} `json:"owner"`
 	} `json:"repositories"`
-	// List []Repository `json:"repositories"`
 }
 
 type config struct {
@@ -87,6 +79,10 @@ func parseFlags() config {
 	flag.BoolVarP(&verbose, "verbose", "v", false, "Verbose stderr")
 
 	flag.Parse()
+
+	if len(os.Args) == 1 {
+		usage("")
+	}
 
 	if cfg.appID == "" {
 		usage("appId is required")
@@ -196,7 +192,7 @@ func usage(msg string) {
 	if msg != "" {
 		fmt.Fprintf(os.Stderr, "ERROR: %s\n\n", msg)
 	}
-	fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
+	fmt.Fprintf(os.Stderr, "Usage: gha-token [flags]\n\nFlags:\n")
 	flag.PrintDefaults()
 	os.Exit(1)
 }
