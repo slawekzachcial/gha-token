@@ -84,7 +84,7 @@ details about HTTP requests and responses, including tokens returned by GitHub.
 
 ## Building
 
-Make sure you `GOPATH` is [properly set](https://github.com/golang/go/wiki/GOPATH).
+Make sure your `GOPATH` is [properly set](https://github.com/golang/go/wiki/GOPATH).
 
 Get the dependencies:
 
