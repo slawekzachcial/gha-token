@@ -51,5 +51,5 @@ you need to pass its URL as parameter, i.e. `-apiUrl https://github.my-company.c
 
 ## Troubleshooting
 
-Use `-v` or `-vv` parameters to get more diagnostic information. Note that `-vv`
-will print HTTP requests and responses, including tokens returned by GitHub.
+Use `-v` to get more diagnostic information. Note that the output will contain
+details about HTTP requests and responses, including tokens returned by GitHub.

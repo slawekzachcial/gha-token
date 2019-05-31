@@ -13,75 +13,71 @@ import (
 	"time"
 )
 
-type InstallationToken struct {
-	Token     string `json:"token"`
-	ExpiresAt string `json:"expires_at"`
+type installationToken struct {
+	token     string `json:"token"`
+	expiresAt string `json:"expires_at"`
 }
 
-type Installation struct {
-	Id              int    `json:"id"`
-	AccessTokensUrl string `json:"access_tokens_url"`
-	RepositoriesUrl string `json:"repositories_url"`
+type installation struct {
+	id              int    `json:"id"`
+	accessTokensURL string `json:"access_tokens_url"`
+	repositoriesURL string `json:"repositories_url"`
 }
 
-type Repository struct {
-	Name  string `json:"name"`
-	Owner struct {
-		Login string `json:"login"`
+type repository struct {
+	name  string `json:"name"`
+	owner struct {
+		login string `json:"login"`
 	} `json:"owner"`
 }
 
-type Repositories struct {
-	List []Repository `json:"repositories"`
+type repositories struct {
+	List []repository `json:"repositories"`
 }
 
 var verbose bool
-var veryVerbose bool
 
 func main() {
-	apiUrlPtr := flag.String("apiUrl", "https://api.github.com", "GitHub API URL")
-	appIdPtr := flag.Int("app", -1, "Appliction ID as defined in app settings. Required")
+	apiURLPtr := flag.String("apiUrl", "https://api.github.com", "GitHub API URL")
+	appIDPtr := flag.String("app", "", "Appliction ID as defined in app settings. Required")
 	keyPathPtr := flag.String("keyPath", "", "Path to key PEM file generated in app settings. Required")
-	installIdPtr := flag.Int("inst", -1, "Installation ID of the application")
+	installIDPtr := flag.String("inst", "", "Installation ID of the application")
 	repoPtr := flag.String("repo", "", "{owner/repo} of the GitHub repository")
 	flag.BoolVar(&verbose, "v", false, "Verbose stderr")
-	flag.BoolVar(&veryVerbose, "vv", false, "Very verbose stderr")
 
 	flag.Parse()
 
-	if *appIdPtr == -1 || *keyPathPtr == "" {
-		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
-		flag.PrintDefaults()
-		os.Exit(1)
+	if *appIDPtr == "" || *keyPathPtr == "" {
+		usage()
 	}
 
-	jwtToken := jwtToken(*appIdPtr, *keyPathPtr)
+	jwtToken := getJwtToken(*appIDPtr, *keyPathPtr)
 
 	var token string
 
-	if *installIdPtr == -1 && *repoPtr == "" {
-		log("Generated JWT token for app ID %d\n", *appIdPtr)
+	if *installIDPtr == "" && *repoPtr == "" {
+		log("Generated JWT token for app ID %s\n", *appIDPtr)
 		token = jwtToken
-	} else if *installIdPtr != -1 {
-		installationToken := installationToken(*apiUrlPtr, jwtToken, *appIdPtr, *installIdPtr)
-		log("Generated installation token for app ID %d and installation ID %d that expires at %s\n", *appIdPtr, *installIdPtr, installationToken.ExpiresAt)
-		token = installationToken.Token
+	} else if *installIDPtr != "" {
+		installToken := getInstallationToken(*apiURLPtr, jwtToken, *appIDPtr, *installIDPtr)
+		log("Generated installation token for app ID %s and installation ID %s that expires at %s\n", *appIDPtr, *installIDPtr, installToken.expiresAt)
+		token = installToken.token
 	} else {
 		repoInfo := strings.Split(*repoPtr, "/")
 		if len(repoInfo) != 2 {
 			logger.Fatalln("-repo argument value must be owner/repo but was: %s", *repoPtr)
 		}
 		owner, repo := repoInfo[0], repoInfo[1]
-		installationToken, err := installationTokenForRepo(*apiUrlPtr, jwtToken, *appIdPtr, owner, repo)
+		installToken, err := getInstallationTokenForRepo(*apiURLPtr, jwtToken, *appIDPtr, owner, repo)
 		handleErrorIfAny(err)
-		log("Generated installation token for app ID %d and repo %s that expires at %s\n", *appIdPtr, *repoPtr, installationToken.ExpiresAt)
-		token = installationToken.Token
+		log("Generated installation token for app ID %s and repo %s that expires at %s\n", *appIDPtr, *repoPtr, installToken.expiresAt)
+		token = installToken.token
 	}
 
 	fmt.Print(token)
 }
 
-func jwtToken(appId int, keyPath string) string {
+func getJwtToken(appID string, keyPath string) string {
 	keyBytes, err := ioutil.ReadFile(keyPath)
 	handleErrorIfAny(err)
 
@@ -92,7 +88,7 @@ func jwtToken(appId int, keyPath string) string {
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
 		"iat": now.Unix(),
 		"exp": now.Add(time.Minute * 10).Unix(),
-		"iss": appId,
+		"iss": appID,
 	})
 
 	jwtTokenString, err := token.SignedString(signKey)
@@ -101,7 +97,7 @@ func jwtToken(appId int, keyPath string) string {
 	return jwtTokenString
 }
 
-func httpJson(method string, url string, authorization string, result interface{}) {
+func httpJSON(method string, url string, authorization string, result interface{}) {
 	client := &http.Client{}
 
 	req, err := http.NewRequest(method, url, nil)
@@ -109,7 +105,7 @@ func httpJson(method string, url string, authorization string, result interface{
 	req.Header.Add("Authorization", authorization)
 	req.Header.Add("Accept", "application/vnd.github.machine-man-preview+json")
 
-	debug("GitHub request: %s", req)
+	log("GitHub request: %s", req)
 
 	resp, err := client.Do(req)
 	handleErrorIfAny(err)
@@ -119,37 +115,37 @@ func httpJson(method string, url string, authorization string, result interface{
 	respData, err := ioutil.ReadAll(resp.Body)
 	handleErrorIfAny(err)
 
-	debug("GitHub response: %s", respData)
+	log("GitHub response: %s", respData)
 
 	json.Unmarshal(respData, &result)
 }
 
-func installationToken(apiUrl string, jwtToken string, appId int, installationId int) InstallationToken {
-	var installationToken InstallationToken
-	httpJson("POST", fmt.Sprintf("%s/app/installations/%d/access_tokens", apiUrl, installationId), "Bearer "+jwtToken, &installationToken)
+func getInstallationToken(apiURL string, jwtToken string, appID string, installationID string) installationToken {
+	var installationToken installationToken
+	httpJSON("POST", fmt.Sprintf("%s/app/installations/%s/access_tokens", apiURL, installationID), "Bearer "+jwtToken, &installationToken)
 
 	return installationToken
 }
 
-func installationTokenForRepo(apiUrl string, jwtToken string, appId int, owner string, repo string) (InstallationToken, error) {
-	var installations []Installation
-	httpJson("GET", apiUrl+"/app/installations", "Bearer "+jwtToken, &installations)
+func getInstallationTokenForRepo(apiURL string, jwtToken string, appID string, owner string, repo string) (installationToken, error) {
+	var installations []installation
+	httpJSON("GET", apiURL+"/app/installations", "Bearer "+jwtToken, &installations)
 
 	for _, installation := range installations {
-		var installationToken InstallationToken
-		httpJson("POST", installation.AccessTokensUrl, "Bearer "+jwtToken, &installationToken)
+		var installationToken installationToken
+		httpJSON("POST", installation.accessTokensURL, "Bearer "+jwtToken, &installationToken)
 
-		var repositories Repositories
-		httpJson("GET", installation.RepositoriesUrl, "token "+installationToken.Token, &repositories)
+		var repos repositories
+		httpJSON("GET", installation.repositoriesURL, "token "+installationToken.token, &repos)
 
-		for _, repository := range repositories.List {
-			if owner == repository.Owner.Login && repo == repository.Name {
+		for _, repository := range repos.List {
+			if owner == repository.owner.login && repo == repository.name {
 				return installationToken, nil
 			}
 		}
 	}
-	var empty InstallationToken
-	return empty, fmt.Errorf("Unable to find repository %s/%s in installations of app ID %d", owner, repo, appId)
+	var empty installationToken
+	return empty, fmt.Errorf("Unable to find repository %s/%s in installations of app ID %s", owner, repo, appID)
 }
 
 func log(format string, v ...interface{}) {
@@ -158,14 +154,14 @@ func log(format string, v ...interface{}) {
 	}
 }
 
-func debug(format string, v ...interface{}) {
-	if veryVerbose {
-		logger.Printf(format, v...)
-	}
-}
-
 func handleErrorIfAny(err error) {
 	if err != nil {
 		logger.Fatalln(err)
 	}
+}
+
+func usage() {
+	fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
+	flag.PrintDefaults()
+	os.Exit(1)
 }
