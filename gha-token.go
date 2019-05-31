@@ -2,9 +2,9 @@ package main
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
 	jwt "github.com/dgrijalva/jwt-go"
+	flag "github.com/spf13/pflag"
 	"io/ioutil"
 	logger "log"
 	"net/http"
@@ -14,67 +14,97 @@ import (
 )
 
 type installationToken struct {
-	token     string `json:"token"`
-	expiresAt string `json:"expires_at"`
+	Token     string `json:"token"`
+	ExpiresAt string `json:"expires_at"`
 }
 
 type installation struct {
-	id              int    `json:"id"`
-	accessTokensURL string `json:"access_tokens_url"`
-	repositoriesURL string `json:"repositories_url"`
+	ID              int    `json:"id"`
+	AccessTokensURL string `json:"access_tokens_url"`
+	RepositoriesURL string `json:"repositories_url"`
 }
 
-type repository struct {
-	name  string `json:"name"`
-	owner struct {
-		login string `json:"login"`
-	} `json:"owner"`
-}
+// type Repository struct {
+// 	Name  string `json:"name"`
+// 	Owner struct {
+// 		Login string `json:"login"`
+// 	} `json:"owner"`
+// }
 
 type repositories struct {
-	List []repository `json:"repositories"`
+	List []struct {
+		Name  string `json:"name"`
+		Owner struct {
+			Login string `json:"login"`
+		} `json:"owner"`
+	} `json:"repositories"`
+	// List []Repository `json:"repositories"`
+}
+
+type config struct {
+	apiURL    string
+	appID     string
+	keyPath   string
+	installID string
+	repoOwner string
+	repoName  string
 }
 
 var verbose bool
 
 func main() {
-	apiURLPtr := flag.String("apiUrl", "https://api.github.com", "GitHub API URL")
-	appIDPtr := flag.String("app", "", "Appliction ID as defined in app settings. Required")
-	keyPathPtr := flag.String("keyPath", "", "Path to key PEM file generated in app settings. Required")
-	installIDPtr := flag.String("inst", "", "Installation ID of the application")
-	repoPtr := flag.String("repo", "", "{owner/repo} of the GitHub repository")
-	flag.BoolVar(&verbose, "v", false, "Verbose stderr")
+	var cfg = parseFlags()
 
-	flag.Parse()
-
-	if *appIDPtr == "" || *keyPathPtr == "" {
-		usage()
-	}
-
-	jwtToken := getJwtToken(*appIDPtr, *keyPathPtr)
+	jwtToken := getJwtToken(cfg.appID, cfg.keyPath)
 
 	var token string
 
-	if *installIDPtr == "" && *repoPtr == "" {
-		log("Generated JWT token for app ID %s\n", *appIDPtr)
+	if cfg.installID == "" && cfg.repoOwner == "" {
+		log("Generated JWT token for app ID %s\n", cfg.appID)
 		token = jwtToken
-	} else if *installIDPtr != "" {
-		installToken := getInstallationToken(*apiURLPtr, jwtToken, *appIDPtr, *installIDPtr)
-		log("Generated installation token for app ID %s and installation ID %s that expires at %s\n", *appIDPtr, *installIDPtr, installToken.expiresAt)
-		token = installToken.token
+	} else if cfg.installID != "" {
+		installToken := getInstallationToken(cfg.apiURL, jwtToken, cfg.appID, cfg.installID)
+		log("Generated installation token for app ID %s and installation ID %s that expires at %s\n", cfg.appID, cfg.installID, installToken.ExpiresAt)
+		token = installToken.Token
 	} else {
-		repoInfo := strings.Split(*repoPtr, "/")
-		if len(repoInfo) != 2 {
-			logger.Fatalln("-repo argument value must be owner/repo but was: %s", *repoPtr)
-		}
-		owner, repo := repoInfo[0], repoInfo[1]
-		installToken, err := getInstallationTokenForRepo(*apiURLPtr, jwtToken, *appIDPtr, owner, repo)
+		installToken, err := getInstallationTokenForRepo(cfg.apiURL, jwtToken, cfg.appID, cfg.repoOwner, cfg.repoName)
 		handleErrorIfAny(err)
-		log("Generated installation token for app ID %s and repo %s that expires at %s\n", *appIDPtr, *repoPtr, installToken.expiresAt)
-		token = installToken.token
+		log("Generated installation token for app ID %s and repo %s/%s that expires at %s\n", cfg.appID, cfg.repoOwner, cfg.repoName, installToken.ExpiresAt)
+		token = installToken.Token
 	}
 
 	fmt.Print(token)
+}
+
+func parseFlags() config {
+	var cfg config
+
+	flag.StringVarP(&cfg.apiURL, "apiUrl", "g", "https://api.github.com", "GitHub API URL")
+	flag.StringVarP(&cfg.appID, "appId", "a", "", "Appliction ID as defined in app settings (Required)")
+	flag.StringVarP(&cfg.keyPath, "keyPath", "k", "", "Path to key PEM file generated in app settings (Required)")
+	flag.StringVarP(&cfg.installID, "installId", "i", "", "Installation ID of the application")
+	repoPtr := flag.StringP("repo", "r", "", "{owner/repo} of the GitHub repository")
+	flag.BoolVarP(&verbose, "verbose", "v", false, "Verbose stderr")
+
+	flag.Parse()
+
+	if cfg.appID == "" {
+		usage("appId is required")
+	}
+
+	if cfg.keyPath == "" {
+		usage("keyPath is required")
+	}
+
+	if *repoPtr != "" {
+		repoInfo := strings.Split(*repoPtr, "/")
+		if len(repoInfo) != 2 {
+			usage("repo argument value must be owner/repo but was: " + *repoPtr)
+		}
+		cfg.repoOwner, cfg.repoName = repoInfo[0], repoInfo[1]
+	}
+
+	return cfg
 }
 
 func getJwtToken(appID string, keyPath string) string {
@@ -118,13 +148,15 @@ func httpJSON(method string, url string, authorization string, result interface{
 	log("GitHub response: %s", respData)
 
 	json.Unmarshal(respData, &result)
+
+	log("%s", result)
 }
 
 func getInstallationToken(apiURL string, jwtToken string, appID string, installationID string) installationToken {
-	var installationToken installationToken
-	httpJSON("POST", fmt.Sprintf("%s/app/installations/%s/access_tokens", apiURL, installationID), "Bearer "+jwtToken, &installationToken)
+	var token installationToken
+	httpJSON("POST", fmt.Sprintf("%s/app/installations/%s/access_tokens", apiURL, installationID), "Bearer "+jwtToken, &token)
 
-	return installationToken
+	return token
 }
 
 func getInstallationTokenForRepo(apiURL string, jwtToken string, appID string, owner string, repo string) (installationToken, error) {
@@ -132,15 +164,15 @@ func getInstallationTokenForRepo(apiURL string, jwtToken string, appID string, o
 	httpJSON("GET", apiURL+"/app/installations", "Bearer "+jwtToken, &installations)
 
 	for _, installation := range installations {
-		var installationToken installationToken
-		httpJSON("POST", installation.accessTokensURL, "Bearer "+jwtToken, &installationToken)
+		var token installationToken
+		httpJSON("POST", installation.AccessTokensURL, "Bearer "+jwtToken, &token)
 
 		var repos repositories
-		httpJSON("GET", installation.repositoriesURL, "token "+installationToken.token, &repos)
+		httpJSON("GET", installation.RepositoriesURL, "token "+token.Token, &repos)
 
 		for _, repository := range repos.List {
-			if owner == repository.owner.login && repo == repository.name {
-				return installationToken, nil
+			if owner == repository.Owner.Login && repo == repository.Name {
+				return token, nil
 			}
 		}
 	}
@@ -160,7 +192,10 @@ func handleErrorIfAny(err error) {
 	}
 }
 
-func usage() {
+func usage(msg string) {
+	if msg != "" {
+		fmt.Fprintf(os.Stderr, "ERROR: %s\n\n", msg)
+	}
 	fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
 	flag.PrintDefaults()
 	os.Exit(1)
