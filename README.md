@@ -1,4 +1,4 @@
-# gha-token: GitHub App Token Generator
+## gha-token: GitHub App Token Generator
 
 Small tool to generate either GitHub App JWT or installation tokens as described in
 [Authenticating with GitHub Apps](https://developer.github.com/apps/building-github-apps/authenticating-with-github-apps/).
@@ -81,3 +81,29 @@ you need to pass its URL as parameter, i.e. `--apiUrl https://github.my-company.
 
 Use `--verbose` to get more diagnostic information. Note that the output will contain
 details about HTTP requests and responses, including tokens returned by GitHub.
+
+## Building
+
+Make sure you `GOPATH` is [properly set](https://github.com/golang/go/wiki/GOPATH).
+
+Get the dependencies:
+
+```
+go get github.com/dgrijalva/jwt-go
+go get github.com/spf13/pflag
+go get -u golang.org/x/lint/golint
+```
+
+Build:
+
+```
+golint && go build
+```
+
+Build for multiple platforms:
+
+```
+mkdir -p $GOPATH/bin/{linux,darwin}/amd64
+GOOS=linux GOARCH=amd64 go build -o $GOPATH/bin/linux/amd64/gha-token
+GOOS=darwin GOARCH=amd64 go build -o $GOPATH/bin/darwin/amd64/gha-token
+```
