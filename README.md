@@ -6,7 +6,7 @@ Small tool to generate either GitHub App JWT or installation tokens as described
 The goal of this tool is to leverage GitHub App identity and permissions to
 interact with GitHub repositories and API. The tool does not require any
 webhook endpoint - just a GitHub App created in Settings. In order to generate
-installation tokens the App also need to be installed in one or more repositories.
+installation tokens the App also needs to be installed in one or more repositories.
 
 For more information about GitHub App check out [the documentation](https://developer.github.com/apps/about-apps/).
 
@@ -63,14 +63,14 @@ To generate installation token based on repository owner and name (e.g. me/myrep
 ```
 
 Note that while this method is more convenient than using installation ID, its
-implementation will invoke GitHub API multiple time in order to find the
+implementation will invoke GitHub API multiple times in order to find the
 corresponding installation ID and generate token for it.
 
 IMPORTANT: Installation tokens expire after 1 hour.
 
 ## GitHub App Available Endpoints
 
-The list is available [here](https://developer.github.com/v3/apps/available-endpoints/).
+The list of endpoints is available [here](https://developer.github.com/v3/apps/available-endpoints/).
 
 ## GitHub Enterprise
 
