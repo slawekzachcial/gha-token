@@ -6,9 +6,29 @@ Small tool to generate either GitHub App JWT or installation tokens as described
 The goal of this tool is to leverage GitHub App identity and permissions to
 interact with GitHub repositories and API. The tool does not require any
 webhook endpoint - just a GitHub App created in Settings. In order to generate
-installation tokens the App also need to be installed.
+installation tokens the App also need to be installed in one or more repositories.
 
 For more information about GitHub App check out [the documentation](https://developer.github.com/apps/about-apps/).
+
+## TL;DR - In Action
+
+Assuming the GitHub App has ID `12345` and you saved the generated key in `key.pem`,
+and you installed this App in your repository `me/myrepo` (where `me` is the name
+of the user or organization), you can now do the following:
+
+To clone the repo using GitHub App identity:
+
+```
+TOKEN=$(ghe-token -a 12345 -k key.pem -r me/myrepo)
+git clone https://x-access-token:${TOKEN}@github.com/me/myrepo.git
+```
+
+To get the list of issues for your repository using GitHub API:
+
+```
+TOKEN=$(ghe-token -a 12345 -k key.pem -r me/myrepo)
+curl -i -H "Authorization: token ${TOKEN}" https://api.github.com/repos/me/myrepo/issues
+```
 
 ## Generating JWT Tokens
 
@@ -16,8 +36,10 @@ JWT tokens allow to interact with GitHub API `/app` endpoint. To generate them
 you need the App ID and private key file in PEM format:
 
 ```
-./gha-token -app 12345 -keyPath path/to/key.pem
+./gha-token --appId 12345 --keyPath path/to/key.pem
 ```
+
+IMPORTANT: Generated JWT token expires after 10 minutes.
 
 ## Generating Installation Tokens
 
@@ -31,25 +53,31 @@ Git repository owner and name.
 To generate installation token based on installation ID (e.g. 98765):
 
 ```
-./gha-token -app 12345 -keyPath path/to/key.pem -inst 98765
+./gha-token --appId 12345 --keyPath path/to/key.pem --installId 98765
 ```
 
 To generate installation token based on repository owner and name (e.g. me/myrepo):
 
 ```
-./gha-token -app 12345 -keyPath path/to/key.pem -repo me/myrepo
+./gha-token --appId 12345 --keyPath path/to/key.pem --repo me/myrepo
 ```
 
 Note that while this method is more convenient than using installation ID, its
 implementation will invoke GitHub API multiple time in order to find the
 corresponding installation ID and generate token for it.
 
+IMPORTANT: Installation tokens expire after 1 hour.
+
+## GitHub App Available Endpoints
+
+The list is available [here](https://developer.github.com/v3/apps/available-endpoints/).
+
 ## GitHub Enterprise
 
 By default the API endpoint used is https://api.github.com. For GitHub Enterprise
-you need to pass its URL as parameter, i.e. `-apiUrl https://github.my-company.com/api/v3`.
+you need to pass its URL as parameter, i.e. `--apiUrl https://github.my-company.com/api/v3`.
 
 ## Troubleshooting
 
-Use `-v` to get more diagnostic information. Note that the output will contain
+Use `--verbose` to get more diagnostic information. Note that the output will contain
 details about HTTP requests and responses, including tokens returned by GitHub.
