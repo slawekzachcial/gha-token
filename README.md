@@ -30,6 +30,10 @@ TOKEN=$(gha-token -a 12345 -k key.pem -r me/myrepo)
 curl -i -H "Authorization: token ${TOKEN}" https://api.github.com/repos/me/myrepo/issues
 ```
 
+## Releases
+
+Looking for pre-built binaries? You can find them on the [Releases](https://github.com/slawekzachcial/gha-token/releases) page. Currently 64-bit Linux and MacOS are available.
+
 ## Generating JWT Tokens
 
 JWT tokens allow to interact with GitHub API `/app` endpoint. To generate them
@@ -67,6 +71,24 @@ implementation will invoke GitHub API multiple times in order to find the
 corresponding installation ID and generate token for it.
 
 IMPORTANT: Installation tokens expire after 1 hour.
+
+## Available Command Line Flags
+
+To get the list of flags simply run:
+
+```
+$> ./gha-token
+
+Usage: gha-token [flags]
+
+Flags:
+  -g, --apiUrl string      GitHub API URL (default "https://api.github.com")
+  -a, --appId string       Appliction ID as defined in app settings (Required)
+  -i, --installId string   Installation ID of the application
+  -k, --keyPath string     Path to key PEM file generated in app settings (Required)
+  -r, --repo string        {owner/repo} of the GitHub repository
+  -v, --verbose            Verbose stderr
+```
 
 ## GitHub App Available Endpoints
 
