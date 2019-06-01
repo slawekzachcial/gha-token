@@ -19,14 +19,14 @@ of the user or organization), you can now do the following:
 To clone the repo using GitHub App identity:
 
 ```
-TOKEN=$(ghe-token -a 12345 -k key.pem -r me/myrepo)
+TOKEN=$(gha-token -a 12345 -k key.pem -r me/myrepo)
 git clone https://x-access-token:${TOKEN}@github.com/me/myrepo.git
 ```
 
 To get the list of issues for your repository using GitHub API:
 
 ```
-TOKEN=$(ghe-token -a 12345 -k key.pem -r me/myrepo)
+TOKEN=$(gha-token -a 12345 -k key.pem -r me/myrepo)
 curl -i -H "Authorization: token ${TOKEN}" https://api.github.com/repos/me/myrepo/issues
 ```
 
