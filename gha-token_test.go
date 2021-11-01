@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 
 	jwt "github.com/golang-jwt/jwt"
@@ -25,6 +26,57 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+func useInstallationToken(t *testing.T, token string) {
+	type Repo struct {
+		FullName string `json:"full_name"`
+		Private  bool   `json:"private"`
+	}
+
+	var repo Repo
+
+	err := httpJSON("GET", fmt.Sprintf("%s/repos/%s", githubApiUrl, testAppInstallRepo), "token "+token, &repo)
+	if err != nil {
+		t.Fatalf("Error using installation token: %v", err)
+	}
+
+	if repo.FullName != testAppInstallRepo {
+		t.Errorf("Expected repo full name: %s but was: %s", testAppInstallRepo, repo.FullName)
+	}
+	if !repo.Private {
+		t.Error("Expected repo to be private")
+	}
+}
+
+func TestGetInstallationTokenForRepo(t *testing.T) {
+	jwtToken, err := getJwtToken(testAppId, testKeyPath)
+	if err != nil {
+		t.Fatalf("Error getting JWT token: %v", err)
+	}
+
+	repoOwner := strings.Split(testAppInstallRepo, "/")
+	token, err := getInstallationTokenForRepo(githubApiUrl, jwtToken, testAppId, repoOwner[0], repoOwner[1])
+	if err != nil {
+		t.Fatalf("Error getting installation token: %v", err)
+	}
+	if token.Token == "" {
+		t.Error("Non-empty installation token expected")
+	}
+
+	useInstallationToken(t, token.Token)
+}
+
+func TestGetInstallationTokenForBadRepo(t *testing.T) {
+	jwtToken, err := getJwtToken(testAppId, testKeyPath)
+	if err != nil {
+		t.Fatalf("Error getting JWT token: %v", err)
+	}
+
+	_, err = getInstallationTokenForRepo(githubApiUrl, jwtToken, testAppId, "bad", "repo0")
+	if err == nil {
+		t.Error("Installation token retrieval expected to fail")
+	}
+}
+
 func TestGetInstallationTokenForInstallId(t *testing.T) {
 	jwtToken, err := getJwtToken(testAppId, testKeyPath)
 	if err != nil {
@@ -39,24 +91,7 @@ func TestGetInstallationTokenForInstallId(t *testing.T) {
 		t.Error("Non-empty installation token expected")
 	}
 
-	type Repo struct {
-		FullName string `json:"full_name"`
-		Private  bool   `json:"private"`
-	}
-
-	var repo Repo
-
-	err = httpJSON("GET", fmt.Sprintf("%s/repos/%s", githubApiUrl, testAppInstallRepo), "token "+token.Token, &repo)
-	if err != nil {
-		t.Fatalf("Error using installation token: %v", err)
-	}
-
-	if repo.FullName != testAppInstallRepo {
-		t.Errorf("Expected repo full name: %s but was: %s", testAppInstallRepo, repo.FullName)
-	}
-	if !repo.Private {
-		t.Error("Expected repo to be private")
-	}
+	useInstallationToken(t, token.Token)
 }
 
 func TestGetInstallationTokenForBadInstallId(t *testing.T) {
