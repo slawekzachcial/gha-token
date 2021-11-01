@@ -25,16 +25,6 @@ type installationToken struct {
 type installation struct {
 	ID              int    `json:"id"`
 	AccessTokensURL string `json:"access_tokens_url"`
-	RepositoriesURL string `json:"repositories_url"`
-}
-
-type repositories struct {
-	List []struct {
-		Name  string `json:"name"`
-		Owner struct {
-			Login string `json:"login"`
-		} `json:"owner"`
-	} `json:"repositories"`
 }
 
 type config struct {
@@ -205,24 +195,20 @@ func getInstallationToken(apiURL string, jwtToken string, appID string, installa
 }
 
 func getInstallationTokenForRepo(apiURL string, jwtToken string, appID string, owner string, repo string) (installationToken, error) {
-	var installations []installation
-	httpJSON("GET", apiURL+"/app/installations", "Bearer "+jwtToken, &installations)
+	var repoInstallation installation
+	var token installationToken
 
-	for _, installation := range installations {
-		var token installationToken
-		httpJSON("POST", installation.AccessTokensURL, "Bearer "+jwtToken, &token)
-
-		var repos repositories
-		httpJSON("GET", installation.RepositoriesURL, "token "+token.Token, &repos)
-
-		for _, repository := range repos.List {
-			if owner == repository.Owner.Login && repo == repository.Name {
-				return token, nil
-			}
-		}
+	err := httpJSON("GET", fmt.Sprintf("%s/repos/%s/%s/installation", apiURL, owner, repo), "Bearer "+jwtToken, &repoInstallation)
+	if err != nil {
+		return token, err
 	}
-	var empty installationToken
-	return empty, fmt.Errorf("Unable to find repository %s/%s in installations of app ID %s", owner, repo, appID)
+
+	err = httpJSON("POST", repoInstallation.AccessTokensURL, "Bearer "+jwtToken, &token)
+	if err != nil {
+		return token, err
+	}
+
+	return token, nil
 }
 
 func log(format string, v ...interface{}) {
