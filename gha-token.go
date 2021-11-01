@@ -49,7 +49,8 @@ var verbose bool
 func main() {
 	var cfg = parseFlags()
 
-	jwtToken := getJwtToken(cfg.appID, cfg.keyPath)
+	jwtToken, err := getJwtToken(cfg.appID, cfg.keyPath)
+	handleErrorIfAny(err)
 
 	var token string
 
@@ -105,24 +106,33 @@ func parseFlags() config {
 	return cfg
 }
 
-func getJwtToken(appID string, keyPath string) string {
+func getJwtToken(appID string, keyPath string) (string, error) {
 	keyBytes, err := ioutil.ReadFile(keyPath)
-	handleErrorIfAny(err)
+	if err != nil {
+		return "", err
+	}
 
 	signKey, err := jwt.ParseRSAPrivateKeyFromPEM(keyBytes)
-	handleErrorIfAny(err)
+	if err != nil {
+		return "", err
+	}
 
 	now := time.Now()
-	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
-		"iat": now.Unix(),
-		"exp": now.Add(time.Minute * 10).Unix(),
-		"iss": appID,
-	})
+	// StandardClaims: https://pkg.go.dev/github.com/golang-jwt/jwt#StandardClaims
+	// Issuer: iss, IssuedAt: iat, ExpiresAt: exp
+	claims := &jwt.StandardClaims{
+		Issuer:    appID,
+		IssuedAt:  now.Unix(),
+		ExpiresAt: now.Add(time.Minute * 10).Unix(),
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
 
 	jwtTokenString, err := token.SignedString(signKey)
-	handleErrorIfAny(err)
+	if err != nil {
+		return "", err
+	}
 
-	return jwtTokenString
+	return jwtTokenString, nil
 }
 
 func httpJSON(method string, url string, authorization string, result interface{}) {
