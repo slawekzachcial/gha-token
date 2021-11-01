@@ -4,26 +4,35 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"strings"
 	"testing"
 
 	jwt "github.com/golang-jwt/jwt"
 )
 
-// TODO: get these values from environment variables and use defaults below if empty
-const testKeyPath = "gha-token-test.private-key.pem"
-const testAppId = "148759"
-const testAppInstallId = "20435383"
-const testAppInstallRepo = "slawekzachcial/gha-token-test"
+var testConfig config
 
 // Flag that can be used to print verbose output from gha-token:
 // go unit [some args] -args -ghaTokenVerbose=true
 var ghaTokenVerbose = flag.Bool("ghaTokenVerbose", false, "Show verbose output for gha-token")
 
 func TestMain(m *testing.M) {
+	testConfig.apiURL = getenv("TEST_GHA_TOKEN_API_URL", githubApiUrl)
+	testConfig.appID = getenv("TEST_GHA_TOKEN_APP_ID", "148759")
+	testConfig.keyPath = getenv("TEST_GHA_TOKEN_KEY_PATH", "gha-token-test.private-key.pem")
+	testConfig.installID = getenv("TEST_GHA_TOKEN_APP_INSTALL_ID", "20435383")
+	testConfig.repoOwner = getenv("TEST_GHA_TOKEN_APP_INSTALL_REPO_OWNER", "slawekzachcial")
+	testConfig.repoName = getenv("TEST_GHA_TOKEN_APP_INSTALL_REPO_NAME", "gha-token-test")
+
 	flag.Parse()
 	verbose = *ghaTokenVerbose
 	os.Exit(m.Run())
+}
+
+func getenv(name, defaultValue string) string {
+	if value := os.Getenv(name); value != "" {
+		return value
+	}
+	return defaultValue
 }
 
 func useInstallationToken(t *testing.T, token string) {
@@ -34,13 +43,13 @@ func useInstallationToken(t *testing.T, token string) {
 
 	var repo Repo
 
-	err := httpJSON("GET", fmt.Sprintf("%s/repos/%s", githubApiUrl, testAppInstallRepo), "token "+token, &repo)
+	err := httpJSON("GET", fmt.Sprintf("%s/repos/%s/%s", testConfig.apiURL, testConfig.repoOwner, testConfig.repoName), "token "+token, &repo)
 	if err != nil {
 		t.Fatalf("Error using installation token: %v", err)
 	}
 
-	if repo.FullName != testAppInstallRepo {
-		t.Errorf("Expected repo full name: %s but was: %s", testAppInstallRepo, repo.FullName)
+	if repo.FullName != testConfig.repoOwner+"/"+testConfig.repoName {
+		t.Errorf("Expected repo full name: %s/%s but was: %s", testConfig.repoOwner, testConfig.repoName, repo.FullName)
 	}
 	if !repo.Private {
 		t.Error("Expected repo to be private")
@@ -48,13 +57,12 @@ func useInstallationToken(t *testing.T, token string) {
 }
 
 func TestGetInstallationTokenForRepo(t *testing.T) {
-	jwtToken, err := getJwtToken(testAppId, testKeyPath)
+	jwtToken, err := getJwtToken(testConfig.appID, testConfig.keyPath)
 	if err != nil {
 		t.Fatalf("Error getting JWT token: %v", err)
 	}
 
-	repoOwner := strings.Split(testAppInstallRepo, "/")
-	token, err := getInstallationTokenForRepo(githubApiUrl, jwtToken, testAppId, repoOwner[0], repoOwner[1])
+	token, err := getInstallationTokenForRepo(githubApiUrl, jwtToken, testConfig.appID, testConfig.repoOwner, testConfig.repoName)
 	if err != nil {
 		t.Fatalf("Error getting installation token: %v", err)
 	}
@@ -66,24 +74,24 @@ func TestGetInstallationTokenForRepo(t *testing.T) {
 }
 
 func TestGetInstallationTokenForBadRepo(t *testing.T) {
-	jwtToken, err := getJwtToken(testAppId, testKeyPath)
+	jwtToken, err := getJwtToken(testConfig.appID, testConfig.keyPath)
 	if err != nil {
 		t.Fatalf("Error getting JWT token: %v", err)
 	}
 
-	_, err = getInstallationTokenForRepo(githubApiUrl, jwtToken, testAppId, "bad", "repo0")
+	_, err = getInstallationTokenForRepo(githubApiUrl, jwtToken, testConfig.appID, "bad", "repo0")
 	if err == nil {
 		t.Error("Installation token retrieval expected to fail")
 	}
 }
 
 func TestGetInstallationTokenForInstallId(t *testing.T) {
-	jwtToken, err := getJwtToken(testAppId, testKeyPath)
+	jwtToken, err := getJwtToken(testConfig.appID, testConfig.keyPath)
 	if err != nil {
 		t.Fatalf("Error getting JWT token: %v", err)
 	}
 
-	token, err := getInstallationToken(githubApiUrl, jwtToken, testAppId, testAppInstallId)
+	token, err := getInstallationToken(githubApiUrl, jwtToken, testConfig.appID, testConfig.installID)
 	if err != nil {
 		t.Fatalf("Error getting installation token: %v", err)
 	}
@@ -95,19 +103,19 @@ func TestGetInstallationTokenForInstallId(t *testing.T) {
 }
 
 func TestGetInstallationTokenForBadInstallId(t *testing.T) {
-	jwtToken, err := getJwtToken(testAppId, testKeyPath)
+	jwtToken, err := getJwtToken(testConfig.appID, testConfig.keyPath)
 	if err != nil {
 		t.Fatalf("Error getting JWT token: %v", err)
 	}
 
-	_, err = getInstallationToken(githubApiUrl, jwtToken, testAppId, "00000")
+	_, err = getInstallationToken(githubApiUrl, jwtToken, testConfig.appID, "00000")
 	if err == nil {
 		t.Error("Installation token retrieval expected to fail")
 	}
 }
 
 func TestGetJWTTokenGenerated(t *testing.T) {
-	jwtToken, err := getJwtToken(testAppId, testKeyPath)
+	jwtToken, err := getJwtToken(testConfig.appID, testConfig.keyPath)
 	if err != nil {
 		t.Error("JWT token generation failed")
 	}
@@ -117,22 +125,22 @@ func TestGetJWTTokenGenerated(t *testing.T) {
 }
 
 func TestGetJWTTokenWrongPath(t *testing.T) {
-	_, err := getJwtToken(testAppId, "i_dont_exist.pem")
+	_, err := getJwtToken(testConfig.appID, "i_dont_exist.pem")
 	if err == nil {
 		t.Error("JWT token generation expected to fail")
 	}
 }
 
 func TestGetJWTTokenAppIdInClaims(t *testing.T) {
-	tokenString, _ := getJwtToken(testAppId, testKeyPath)
+	tokenString, _ := getJwtToken(testConfig.appID, testConfig.keyPath)
 
 	token, _ := jwt.ParseWithClaims(tokenString, &jwt.StandardClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return []byte("xxx"), nil
 	})
 
 	if claims, ok := token.Claims.(*jwt.StandardClaims); ok {
-		if claims.Issuer != testAppId {
-			t.Errorf("Expected Issuer in the token '%s' was: %s but got: %s", tokenString, testAppId, claims.Issuer)
+		if claims.Issuer != testConfig.appID {
+			t.Errorf("Expected Issuer in the token '%s' was: %s but got: %s", tokenString, testConfig.appID, claims.Issuer)
 		}
 	} else {
 		t.Errorf("Unable to parse token: %s", tokenString)
