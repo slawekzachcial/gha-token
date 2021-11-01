@@ -13,6 +13,12 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - name : Setup test
+      run: 'echo "$PRIVATE_KEY" > gha-token-test.private-key.pem'
+      shell: bash
+      env:
+        PRIVATE_KEY: ${{secrets.PRIVATE_KEY}}
+
     - name: Set up Go
       uses: actions/setup-go@v2
       with:
