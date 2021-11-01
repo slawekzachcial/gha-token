@@ -15,6 +15,8 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
+const githubApiUrl = "https://api.github.com"
+
 type installationToken struct {
 	Token     string `json:"token"`
 	ExpiresAt string `json:"expires_at"`
@@ -58,7 +60,8 @@ func main() {
 		log("Generated JWT token for app ID %s\n", cfg.appID)
 		token = jwtToken
 	} else if cfg.installID != "" {
-		installToken := getInstallationToken(cfg.apiURL, jwtToken, cfg.appID, cfg.installID)
+		installToken, err := getInstallationToken(cfg.apiURL, jwtToken, cfg.appID, cfg.installID)
+		handleErrorIfAny(err)
 		log("Generated installation token for app ID %s and installation ID %s that expires at %s\n", cfg.appID, cfg.installID, installToken.ExpiresAt)
 		token = installToken.Token
 	} else {
@@ -74,7 +77,7 @@ func main() {
 func parseFlags() config {
 	var cfg config
 
-	flag.StringVarP(&cfg.apiURL, "apiUrl", "g", "https://api.github.com", "GitHub API URL")
+	flag.StringVarP(&cfg.apiURL, "apiUrl", "g", githubApiUrl, "GitHub API URL")
 	flag.StringVarP(&cfg.appID, "appId", "a", "", "Appliction ID as defined in app settings (Required)")
 	flag.StringVarP(&cfg.keyPath, "keyPath", "k", "", "Path to key PEM file generated in app settings (Required)")
 	flag.StringVarP(&cfg.installID, "installId", "i", "", "Installation ID of the application")
@@ -135,46 +138,70 @@ func getJwtToken(appID string, keyPath string) (string, error) {
 	return jwtTokenString, nil
 }
 
-func httpJSON(method string, url string, authorization string, result interface{}) {
-	client := &http.Client{}
-
-	req, err := http.NewRequest(method, url, nil)
-	handleErrorIfAny(err)
-	req.Header.Add("Authorization", authorization)
-	req.Header.Add("Accept", "application/vnd.github.machine-man-preview+json")
-
+func logRequest(req *http.Request) {
 	reqDump, err := httputil.DumpRequestOut(req, true)
 	if err == nil {
 		log("GitHub request:\n%s", string(reqDump))
 	} else {
 		log("Unable to log GitHub request: %s", err)
 	}
+}
 
-	resp, err := client.Do(req)
-	handleErrorIfAny(err)
-
+func logResponse(resp *http.Response) {
 	respDump, err := httputil.DumpResponse(resp, true)
 	if err == nil {
 		log("GitHub response:\n%s", string(respDump))
 	} else {
 		log("Unable to log GitHub response: %s", err)
 	}
+}
+
+// TODO: return result instead of passing it as param
+func httpJSON(method string, url string, authorization string, result interface{}) error {
+	client := &http.Client{}
+
+	req, err := http.NewRequest(method, url, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Add("Authorization", authorization)
+	req.Header.Add("Accept", "application/vnd.github.machine-man-preview+json")
+
+	logRequest(req)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+
+	logResponse(resp)
 
 	defer resp.Body.Close()
 
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("Expected HTTP status code 2xx but got %d", resp.StatusCode)
+	}
+
 	respData, err := ioutil.ReadAll(resp.Body)
-	handleErrorIfAny(err)
+	if err != nil {
+		return err
+	}
 
 	json.Unmarshal(respData, &result)
 
 	log("%s", result)
+
+	return nil
 }
 
-func getInstallationToken(apiURL string, jwtToken string, appID string, installationID string) installationToken {
+func getInstallationToken(apiURL string, jwtToken string, appID string, installationID string) (installationToken, error) {
 	var token installationToken
-	httpJSON("POST", fmt.Sprintf("%s/app/installations/%s/access_tokens", apiURL, installationID), "Bearer "+jwtToken, &token)
+	err := httpJSON("POST", fmt.Sprintf("%s/app/installations/%s/access_tokens", apiURL, installationID), "Bearer "+jwtToken, &token)
+	if err != nil {
+		return token, err
+	}
 
-	return token
+	return token, nil
 }
 
 func getInstallationTokenForRepo(apiURL string, jwtToken string, appID string, owner string, repo string) (installationToken, error) {
