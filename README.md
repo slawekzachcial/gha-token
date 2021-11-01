@@ -83,7 +83,7 @@ Usage: gha-token [flags]
 
 Flags:
   -g, --apiUrl string      GitHub API URL (default "https://api.github.com")
-  -a, --appId string       Appliction ID as defined in app settings (Required)
+  -a, --appId string       Application ID as defined in app settings (Required)
   -i, --installId string   Installation ID of the application
   -k, --keyPath string     Path to key PEM file generated in app settings (Required)
   -r, --repo string        {owner/repo} of the GitHub repository

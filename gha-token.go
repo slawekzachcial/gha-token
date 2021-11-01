@@ -78,7 +78,7 @@ func parseFlags() config {
 	var cfg config
 
 	flag.StringVarP(&cfg.apiURL, "apiUrl", "g", githubApiUrl, "GitHub API URL")
-	flag.StringVarP(&cfg.appID, "appId", "a", "", "Appliction ID as defined in app settings (Required)")
+	flag.StringVarP(&cfg.appID, "appId", "a", "", "Application ID as defined in app settings (Required)")
 	flag.StringVarP(&cfg.keyPath, "keyPath", "k", "", "Path to key PEM file generated in app settings (Required)")
 	flag.StringVarP(&cfg.installID, "installId", "i", "", "Installation ID of the application")
 	repoPtr := flag.StringP("repo", "r", "", "{owner/repo} of the GitHub repository")
