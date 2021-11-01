@@ -3,14 +3,16 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	jwt "github.com/dgrijalva/jwt-go"
-	flag "github.com/spf13/pflag"
 	"io/ioutil"
 	logger "log"
 	"net/http"
+	"net/http/httputil"
 	"os"
 	"strings"
 	"time"
+
+	jwt "github.com/dgrijalva/jwt-go"
+	flag "github.com/spf13/pflag"
 )
 
 type installationToken struct {
@@ -131,17 +133,27 @@ func httpJSON(method string, url string, authorization string, result interface{
 	req.Header.Add("Authorization", authorization)
 	req.Header.Add("Accept", "application/vnd.github.machine-man-preview+json")
 
-	log("GitHub request: %s", req)
+	reqDump, err := httputil.DumpRequestOut(req, true)
+	if err == nil {
+		log("GitHub request:\n%s", string(reqDump))
+	} else {
+		log("Unable to log GitHub request: %s", err)
+	}
 
 	resp, err := client.Do(req)
 	handleErrorIfAny(err)
+
+	respDump, err := httputil.DumpResponse(resp, true)
+	if err == nil {
+		log("GitHub response:\n%s", string(respDump))
+	} else {
+		log("Unable to log GitHub response: %s", err)
+	}
 
 	defer resp.Body.Close()
 
 	respData, err := ioutil.ReadAll(resp.Body)
 	handleErrorIfAny(err)
-
-	log("GitHub response: %s", respData)
 
 	json.Unmarshal(respData, &result)
 
