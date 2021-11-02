@@ -155,7 +155,7 @@ func httpJSON(method string, url string, authorization string, result interface{
 		return err
 	}
 	req.Header.Add("Authorization", authorization)
-	req.Header.Add("Accept", "application/vnd.github.machine-man-preview+json")
+	req.Header.Add("Accept", "application/vnd.github.v3+json")
 
 	logRequest(req)
 
