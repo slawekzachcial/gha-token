@@ -83,9 +83,10 @@ Usage: gha-token [flags]
 
 Flags:
   -g, --apiUrl string      GitHub API URL (default "https://api.github.com")
-  -a, --appId string       Application ID as defined in app settings (Required)
+  -a, --appId string       Application ID as defined in app settings (required)
+  -s, --expSecs int        JWT token expiration in seconds (default 600)
   -i, --installId string   Installation ID of the application
-  -k, --keyPath string     Path to key PEM file generated in app settings (Required)
+  -k, --keyPath string     Path to key PEM file generated in app settings (required)
   -r, --repo string        {owner/repo} of the GitHub repository
   -v, --verbose            Verbose stderr
 ```

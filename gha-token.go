@@ -16,6 +16,7 @@ import (
 )
 
 const githubApiUrl = "https://api.github.com"
+const jwtExpirationSecs = 600
 
 type installationToken struct {
 	Token     string `json:"token"`
@@ -31,6 +32,7 @@ type config struct {
 	apiURL    string
 	appID     string
 	keyPath   string
+	expSecs   int
 	installID string
 	repoOwner string
 	repoName  string
@@ -41,7 +43,7 @@ var verbose bool
 func main() {
 	var cfg = parseFlags()
 
-	jwtToken, err := getJwtToken(cfg.appID, cfg.keyPath)
+	jwtToken, err := getJwtToken(cfg.appID, cfg.keyPath, cfg.expSecs)
 	handleErrorIfAny(err)
 
 	var token string
@@ -68,8 +70,9 @@ func parseFlags() config {
 	var cfg config
 
 	flag.StringVarP(&cfg.apiURL, "apiUrl", "g", githubApiUrl, "GitHub API URL")
-	flag.StringVarP(&cfg.appID, "appId", "a", "", "Application ID as defined in app settings (Required)")
-	flag.StringVarP(&cfg.keyPath, "keyPath", "k", "", "Path to key PEM file generated in app settings (Required)")
+	flag.StringVarP(&cfg.appID, "appId", "a", "", "Application ID as defined in app settings (required)")
+	flag.StringVarP(&cfg.keyPath, "keyPath", "k", "", "Path to key PEM file generated in app settings (required)")
+	flag.IntVarP(&cfg.expSecs, "expSecs", "s", jwtExpirationSecs, "JWT token expiration in seconds")
 	flag.StringVarP(&cfg.installID, "installId", "i", "", "Installation ID of the application")
 	repoPtr := flag.StringP("repo", "r", "", "{owner/repo} of the GitHub repository")
 	flag.BoolVarP(&verbose, "verbose", "v", false, "Verbose stderr")
@@ -99,7 +102,7 @@ func parseFlags() config {
 	return cfg
 }
 
-func getJwtToken(appID string, keyPath string) (string, error) {
+func getJwtToken(appID string, keyPath string, expSecs int) (string, error) {
 	keyBytes, err := ioutil.ReadFile(keyPath)
 	if err != nil {
 		return "", err
@@ -116,7 +119,7 @@ func getJwtToken(appID string, keyPath string) (string, error) {
 	claims := &jwt.StandardClaims{
 		Issuer:    appID,
 		IssuedAt:  now.Unix(),
-		ExpiresAt: now.Add(time.Minute * 10).Unix(),
+		ExpiresAt: now.Add(time.Second * time.Duration(expSecs)).Unix(),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
 
