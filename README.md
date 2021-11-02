@@ -18,14 +18,14 @@ of the user or organization), you can now do the following:
 
 To clone the repo using GitHub App identity:
 
-```
+```bash
 TOKEN=$(gha-token -a 12345 -k key.pem -r me/myrepo)
 git clone https://x-access-token:${TOKEN}@github.com/me/myrepo.git
 ```
 
 To get the list of issues for your repository using GitHub API:
 
-```
+```bash
 TOKEN=$(gha-token -a 12345 -k key.pem -r me/myrepo)
 curl -i -H "Authorization: token ${TOKEN}" https://api.github.com/repos/me/myrepo/issues
 ```
@@ -39,7 +39,7 @@ Looking for pre-built binaries? You can find them on the [Releases](https://gith
 JWT tokens allow to interact with GitHub API `/app` endpoint. To generate them
 you need the App ID and private key file in PEM format:
 
-```
+```bash
 ./gha-token --appId 12345 --keyPath path/to/key.pem
 ```
 
@@ -56,13 +56,13 @@ Git repository owner and name.
 
 To generate installation token based on installation ID (e.g. 98765):
 
-```
+```bash
 ./gha-token --appId 12345 --keyPath path/to/key.pem --installId 98765
 ```
 
 To generate installation token based on repository owner and name (e.g. me/myrepo):
 
-```
+```bash
 ./gha-token --appId 12345 --keyPath path/to/key.pem --repo me/myrepo
 ```
 
@@ -96,7 +96,7 @@ The list of endpoints is available [here](https://developer.github.com/v3/apps/a
 
 ## GitHub Enterprise
 
-By default the API endpoint used is https://api.github.com. For GitHub Enterprise
+By default the API endpoint used is <https://api.github.com>. For GitHub Enterprise
 you need to pass its URL as parameter, i.e. `--apiUrl https://github.my-company.com/api/v3`.
 
 ## Troubleshooting
@@ -110,21 +110,19 @@ Make sure your `GOPATH` is [properly set](https://github.com/golang/go/wiki/GOPA
 
 Get the dependencies:
 
-```
-go get github.com/dgrijalva/jwt-go
-go get github.com/spf13/pflag
-go get -u golang.org/x/lint/golint
+```bash
+go mod tidy
 ```
 
 Build:
 
-```
-golint && go build
+```bash
+go build
 ```
 
 Build for multiple platforms:
 
-```
+```bash
 mkdir -p $GOPATH/bin/{linux,darwin}/amd64
 GOOS=linux GOARCH=amd64 go build -o $GOPATH/bin/linux/amd64/gha-token
 GOOS=darwin GOARCH=amd64 go build -o $GOPATH/bin/darwin/amd64/gha-token
