@@ -180,7 +180,9 @@ func httpJSON(method string, url string, authorization string, result interface{
 		return err
 	}
 
-	json.Unmarshal(respData, &result)
+	if err := json.Unmarshal(respData, &result); err != nil {
+		return err
+	}
 
 	log("%s", result)
 
