@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - As of GitHub 2.22 GitHub Apps APIs graduated and so `Accept`
-  header is now `application/json` instead of `application/vnd.github.machine-man-preview+json`.
+  header is now `application/vnd.github.v3+json` instead of `application/vnd.github.machine-man-preview+json`.
   This change is BREAKING if still using GitHub Enterprise 2.21 (or older)
   which was discontinued by GitHub on 2021-06-09.
 
