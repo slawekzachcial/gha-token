@@ -32,7 +32,8 @@ curl -i -H "Authorization: token ${TOKEN}" https://api.github.com/repos/me/myrep
 
 ## Releases
 
-Looking for pre-built binaries? You can find them on the [Releases](https://github.com/slawekzachcial/gha-token/releases) page. Currently 64-bit Linux and MacOS are available.
+Looking for pre-built binaries? You can find them on the [Releases](https://github.com/slawekzachcial/gha-token/releases)
+page. Currently 64-bit Linux and MacOS are available.
 
 ## Generating JWT Tokens
 
@@ -43,7 +44,11 @@ you need the App ID and private key file in PEM format:
 ./gha-token --appId 12345 --keyPath path/to/key.pem
 ```
 
-IMPORTANT: Generated JWT token expires after 10 minutes.
+IMPORTANT: Generated JWT token expires by default after 10 minutes. This can
+be overwritten using `--expSecs` parameter, e.g. with `--expSecs 1200` the token
+expires after 20 minutes. This can be helpful if the clock difference, due to
+drift, between the GitHub instance and the server where token is generated is
+more than 10 minutes.
 
 ## Generating Installation Tokens
 
@@ -76,16 +81,17 @@ IMPORTANT: Installation tokens expire after 1 hour.
 
 To get the list of flags simply run:
 
-```
+```bash
 $> ./gha-token
 
 Usage: gha-token [flags]
 
 Flags:
   -g, --apiUrl string      GitHub API URL (default "https://api.github.com")
-  -a, --appId string       Application ID as defined in app settings (Required)
+  -a, --appId string       Application ID as defined in app settings (required)
+  -s, --expSecs int        JWT token expiration in seconds (default 600)
   -i, --installId string   Installation ID of the application
-  -k, --keyPath string     Path to key PEM file generated in app settings (Required)
+  -k, --keyPath string     Path to key PEM file generated in app settings (required)
   -r, --repo string        {owner/repo} of the GitHub repository
   -v, --verbose            Verbose stderr
 ```
@@ -104,26 +110,51 @@ you need to pass its URL as parameter, i.e. `--apiUrl https://github.my-company.
 Use `--verbose` to get more diagnostic information. Note that the output will contain
 details about HTTP requests and responses, including tokens returned by GitHub.
 
-## Building
-
-Make sure your `GOPATH` is [properly set](https://github.com/golang/go/wiki/GOPATH).
-
-Get the dependencies:
+If you want to get verbose output as above when running unit tests add `-args -ghaTokenVerbose=true`,
+for example:
 
 ```bash
-go mod tidy
+go test -run TestGetInstallationTokenForRepo -args -ghaTokenVerbose=true
+go test -args -ghaTokenVerbose=true
 ```
 
-Build:
+## Running Tests
+
+Running tests requires a GitHub App created on GitHub and installed into a private
+repository. The following environment variables can be used to overwrite the
+hardcoded values and then run the tests:
+
+```bash
+export TEST_GHA_TOKEN_API_URL=https://github.my-company.com/api/v3
+export TEST_GHA_TOKEN_APP_ID=123456
+export TEST_GHA_TOKEN_KEY_PATH=path/to/private-key.pem")
+export TEST_GHA_TOKEN_APP_INSTALL_ID=2222222
+export TEST_GHA_TOKEN_APP_INSTALL_REPO_OWNER=your-org
+export TEST_GHA_TOKEN_APP_INSTALL_REPO_NAME=your-test-repo-where-app-installed
+
+go test -v
+```
+
+## Building
+
+`gha-token` is a GO module and it can be simply built with:
 
 ```bash
 go build
 ```
 
-Build for multiple platforms:
+To make sure all is as it should be it's better to run:
 
 ```bash
-mkdir -p $GOPATH/bin/{linux,darwin}/amd64
-GOOS=linux GOARCH=amd64 go build -o $GOPATH/bin/linux/amd64/gha-token
-GOOS=darwin GOARCH=amd64 go build -o $GOPATH/bin/darwin/amd64/gha-token
+golangci-lint run && go test && go build
+```
+
+Note that you'll need the linter installed as described [here](https://golangci-lint.run/usage/install/#local-installation).
+
+To build for multiple platforms:
+
+```bash
+mkdir -p build
+GOOS=linux GOARCH=amd64 go build -o build/linux/amd64/gha-token
+GOOS=darwin GOARCH=amd64 go build -o build/darwin/amd64/gha-token
 ```

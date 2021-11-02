@@ -57,7 +57,7 @@ func useInstallationToken(t *testing.T, token string) {
 }
 
 func TestGetInstallationTokenForRepo(t *testing.T) {
-	jwtToken, err := getJwtToken(testConfig.appID, testConfig.keyPath)
+	jwtToken, err := getJwtToken(testConfig.appID, testConfig.keyPath, jwtExpirationSecs)
 	if err != nil {
 		t.Fatalf("Error getting JWT token: %v", err)
 	}
@@ -74,7 +74,7 @@ func TestGetInstallationTokenForRepo(t *testing.T) {
 }
 
 func TestGetInstallationTokenForBadRepo(t *testing.T) {
-	jwtToken, err := getJwtToken(testConfig.appID, testConfig.keyPath)
+	jwtToken, err := getJwtToken(testConfig.appID, testConfig.keyPath, jwtExpirationSecs)
 	if err != nil {
 		t.Fatalf("Error getting JWT token: %v", err)
 	}
@@ -86,7 +86,7 @@ func TestGetInstallationTokenForBadRepo(t *testing.T) {
 }
 
 func TestGetInstallationTokenForInstallId(t *testing.T) {
-	jwtToken, err := getJwtToken(testConfig.appID, testConfig.keyPath)
+	jwtToken, err := getJwtToken(testConfig.appID, testConfig.keyPath, jwtExpirationSecs)
 	if err != nil {
 		t.Fatalf("Error getting JWT token: %v", err)
 	}
@@ -103,7 +103,7 @@ func TestGetInstallationTokenForInstallId(t *testing.T) {
 }
 
 func TestGetInstallationTokenForBadInstallId(t *testing.T) {
-	jwtToken, err := getJwtToken(testConfig.appID, testConfig.keyPath)
+	jwtToken, err := getJwtToken(testConfig.appID, testConfig.keyPath, jwtExpirationSecs)
 	if err != nil {
 		t.Fatalf("Error getting JWT token: %v", err)
 	}
@@ -115,7 +115,7 @@ func TestGetInstallationTokenForBadInstallId(t *testing.T) {
 }
 
 func TestGetJWTTokenGenerated(t *testing.T) {
-	jwtToken, err := getJwtToken(testConfig.appID, testConfig.keyPath)
+	jwtToken, err := getJwtToken(testConfig.appID, testConfig.keyPath, jwtExpirationSecs)
 	if err != nil {
 		t.Error("JWT token generation failed")
 	}
@@ -125,14 +125,14 @@ func TestGetJWTTokenGenerated(t *testing.T) {
 }
 
 func TestGetJWTTokenWrongPath(t *testing.T) {
-	_, err := getJwtToken(testConfig.appID, "i_dont_exist.pem")
+	_, err := getJwtToken(testConfig.appID, "i_dont_exist.pem", jwtExpirationSecs)
 	if err == nil {
 		t.Error("JWT token generation expected to fail")
 	}
 }
 
 func TestGetJWTTokenAppIdInClaims(t *testing.T) {
-	tokenString, _ := getJwtToken(testConfig.appID, testConfig.keyPath)
+	tokenString, _ := getJwtToken(testConfig.appID, testConfig.keyPath, jwtExpirationSecs)
 
 	token, _ := jwt.ParseWithClaims(tokenString, &jwt.StandardClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return []byte("xxx"), nil
@@ -141,6 +141,24 @@ func TestGetJWTTokenAppIdInClaims(t *testing.T) {
 	if claims, ok := token.Claims.(*jwt.StandardClaims); ok {
 		if claims.Issuer != testConfig.appID {
 			t.Errorf("Expected Issuer in the token '%s' was: %s but got: %s", tokenString, testConfig.appID, claims.Issuer)
+		}
+	} else {
+		t.Errorf("Unable to parse token: %s", tokenString)
+	}
+}
+
+func TestGetJWTTokenWithCustomExpiration(t *testing.T) {
+	customExpirationSecs := 3600
+	tokenString, _ := getJwtToken(testConfig.appID, testConfig.keyPath, customExpirationSecs)
+
+	token, _ := jwt.ParseWithClaims(tokenString, &jwt.StandardClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return []byte("xxx"), nil
+	})
+
+	if claims, ok := token.Claims.(*jwt.StandardClaims); ok {
+		tokenExpirationSecs := claims.ExpiresAt - claims.IssuedAt
+		if int(tokenExpirationSecs) != customExpirationSecs {
+			t.Errorf("Expected JWT token custom expiration to be: %ds but was: %ds", customExpirationSecs, tokenExpirationSecs)
 		}
 	} else {
 		t.Errorf("Unable to parse token: %s", tokenString)
