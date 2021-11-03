@@ -1,0 +1,54 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    # inputs:
+    #   version:
+    #     description: SemVer-compatible version number for the release
+    #     required: true
+
+jobs:
+
+  release:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name : Setup test
+      run: 'echo "$PRIVATE_KEY" > gha-token-test.private-key.pem'
+      shell: bash
+      env:
+        PRIVATE_KEY: ${{secrets.PRIVATE_KEY}}
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.17
+
+    - name: Lint
+      uses: golangci/golangci-lint-action@v2
+
+    - name: Build
+      run: go build -v ./...
+
+    - name: Test
+      run: go test -v ./...
+
+    - name: Get Version from CHANGELOG
+      id: get-release-version
+      run: |
+        RELEASE_VERSION="$(grep '^## \[\d' CHANGELOG.md | head -n1 | sed -e 's/^.*\[//' -e 's/\].*$//')"
+        echo "::set-output name=RELEASE_VERSION::${RELEASE_VERSION}"
+
+    - name: Check Release Tag
+      run: '! git rev-parse -q --verify "refs/tags/${RELEASE_VERSION}" >/dev/null'
+
+    - name: Create Release Artifacts
+      run: |
+        mkdir -p build/darwin build/linux
+        GOOS=linux GOARCH=amd64 go build -o build/linux/gha-token
+        tar -c -C build/linux -f build/gha-token_${{ steps.get-release-version.outputs.RELEASE_VERSION }}_linux_amd64.tar.gz gha-token
+        GOOS=darwin GOARCH=amd64 go build -o build/darwin/gha-token
+        tar -c -C build/darwin -f build/gha-token_${{ steps.get-release-version.outputs.RELEASE_VERSION }}_darwin_amd64.tar.gz gha-token
+
+
