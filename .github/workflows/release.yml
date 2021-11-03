@@ -38,10 +38,11 @@ jobs:
       id: get-release-version
       run: |
         RELEASE_VERSION="$(grep '^## \[\d' CHANGELOG.md | head -n1 | sed -e 's/^.*\[//' -e 's/\].*$//')"
+        echo "Release Version in CHANGELOG: ${RELEASE_VERSION}"
         echo "::set-output name=RELEASE_VERSION::${RELEASE_VERSION}"
 
     - name: Check Release Tag
-      run: '! git rev-parse -q --verify "refs/tags/${RELEASE_VERSION}" >/dev/null'
+      run: '! git rev-parse -q --verify "refs/tags/${{ steps.get-release-version.outputs.RELEASE_VERSION }}" >/dev/null'
 
     - name: Create Release Artifacts
       run: |
