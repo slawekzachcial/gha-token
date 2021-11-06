@@ -2,10 +2,6 @@ name: Release
 
 on:
   workflow_dispatch:
-    # inputs:
-    #   version:
-    #     description: SemVer-compatible version number for the release
-    #     required: true
 
 jobs:
 
@@ -55,4 +51,12 @@ jobs:
         GOOS=darwin GOARCH=amd64 go build -o build/darwin/gha-token
         tar -c -C build/darwin -f build/gha-token_${{ steps.get-release-version.outputs.RELEASE_VERSION }}_darwin_amd64.tar.gz gha-token
 
-
+    - name: Publish Release
+      uses: ncipollo/release-action@v1
+      with:
+        draft: true
+        artifacts: "build/*.tar.gz"
+        name: "${{ steps.get-release-version.outputs.RELEASE_VERSION }}"
+        body: "${{ steps.get-release-version.outputs.RELEASE_NOTES }}"
+        tag: "${{ steps.get-release-version.outputs.RELEASE_VERSION }}"
+        token: ${{ secrets.GITHUB_TOKEN }}
