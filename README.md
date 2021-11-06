@@ -18,14 +18,14 @@ of the user or organization), you can now do the following:
 
 To clone the repo using GitHub App identity:
 
-```
+```bash
 TOKEN=$(gha-token -a 12345 -k key.pem -r me/myrepo)
 git clone https://x-access-token:${TOKEN}@github.com/me/myrepo.git
 ```
 
 To get the list of issues for your repository using GitHub API:
 
-```
+```bash
 TOKEN=$(gha-token -a 12345 -k key.pem -r me/myrepo)
 curl -i -H "Authorization: token ${TOKEN}" https://api.github.com/repos/me/myrepo/issues
 ```
@@ -40,7 +40,7 @@ page. Currently 64-bit Linux and MacOS are available.
 JWT tokens allow to interact with GitHub API `/app` endpoint. To generate them
 you need the App ID and private key file in PEM format:
 
-```
+```bash
 ./gha-token --appId 12345 --keyPath path/to/key.pem
 ```
 
@@ -61,13 +61,13 @@ Git repository owner and name.
 
 To generate installation token based on installation ID (e.g. 98765):
 
-```
+```bash
 ./gha-token --appId 12345 --keyPath path/to/key.pem --installId 98765
 ```
 
 To generate installation token based on repository owner and name (e.g. me/myrepo):
 
-```
+```bash
 ./gha-token --appId 12345 --keyPath path/to/key.pem --repo me/myrepo
 ```
 
@@ -81,7 +81,7 @@ IMPORTANT: Installation tokens expire after 1 hour.
 
 To get the list of flags simply run:
 
-```
+```bash
 $> ./gha-token
 
 Usage: gha-token [flags]
@@ -102,7 +102,7 @@ The list of endpoints is available [here](https://developer.github.com/v3/apps/a
 
 ## GitHub Enterprise
 
-By default the API endpoint used is https://api.github.com. For GitHub Enterprise
+By default the API endpoint used is <https://api.github.com>. For GitHub Enterprise
 you need to pass its URL as parameter, i.e. `--apiUrl https://github.my-company.com/api/v3`.
 
 ## Troubleshooting
@@ -113,7 +113,7 @@ details about HTTP requests and responses, including tokens returned by GitHub.
 If you want to get verbose output as above when running unit tests add `-args -ghaTokenVerbose=true`,
 for example:
 
-```
+```bash
 go test -run TestGetInstallationTokenForRepo -args -ghaTokenVerbose=true
 go test -args -ghaTokenVerbose=true
 ```
@@ -124,7 +124,7 @@ Running tests requires a GitHub App created on GitHub and installed into a priva
 repository. The following environment variables can be used to overwrite the
 hardcoded values and then run the tests:
 
-```
+```bash
 export TEST_GHA_TOKEN_API_URL=https://github.my-company.com/api/v3
 export TEST_GHA_TOKEN_APP_ID=123456
 export TEST_GHA_TOKEN_KEY_PATH=path/to/private-key.pem")
@@ -139,13 +139,13 @@ go test -v
 
 `gha-token` is a GO module and it can be simply built with:
 
-```
+```bash
 go build
 ```
 
 To make sure all is as it should be it's better to run:
 
-```
+```bash
 golangci-lint run && go test && go build
 ```
 
@@ -153,7 +153,7 @@ Note that you'll need the linter installed as described [here](https://golangci-
 
 To build for multiple platforms:
 
-```
+```bash
 mkdir -p build
 GOOS=linux GOARCH=amd64 go build -o build/linux/amd64/gha-token
 GOOS=darwin GOARCH=amd64 go build -o build/darwin/amd64/gha-token
