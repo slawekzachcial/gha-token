@@ -127,7 +127,7 @@ hardcoded values and then run the tests:
 ```bash
 export TEST_GHA_TOKEN_API_URL=https://github.my-company.com/api/v3
 export TEST_GHA_TOKEN_APP_ID=123456
-export TEST_GHA_TOKEN_KEY_PATH=path/to/private-key.pem")
+export TEST_GHA_TOKEN_KEY_PATH=path/to/private-key.pem
 export TEST_GHA_TOKEN_APP_INSTALL_ID=2222222
 export TEST_GHA_TOKEN_APP_INSTALL_REPO_OWNER=your-org
 export TEST_GHA_TOKEN_APP_INSTALL_REPO_NAME=your-test-repo-where-app-installed
@@ -158,3 +158,11 @@ mkdir -p build
 GOOS=linux GOARCH=amd64 go build -o build/linux/amd64/gha-token
 GOOS=darwin GOARCH=amd64 go build -o build/darwin/amd64/gha-token
 ```
+
+## GitHub Actions
+
+This repository defines 2 workflows:
+- Build: Runs on each push or PR to the main branch. Lints the code, builds it
+  and runs tests.
+- Release: Triggered manually - builds and publishes GitHub release. Uses
+  latest version number and release notes from the [CHANGELOG.md](CHANGELOG.md).
