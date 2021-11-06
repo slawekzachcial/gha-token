@@ -49,7 +49,7 @@ jobs:
         RELEASE_NOTES="${RELEASE_NOTES//$'\r'/'%0D'}"
         echo "::set-output name=RELEASE_NOTES::${RELEASE_NOTES}"
 
-    - name: Check Release Tag
+    - name: Ensure Release Tag Does Not Exist
       run: '! git rev-parse -q --verify "refs/tags/${{ steps.get-release-version.outputs.RELEASE_VERSION }}" >/dev/null'
 
     - name: Create Release Artifacts
@@ -75,7 +75,6 @@ jobs:
     - name: Publish Release
       uses: ncipollo/release-action@v1
       with:
-        draft: true
         artifacts: "build/*.tar.gz"
         name: "${{ steps.get-release-version.outputs.RELEASE_VERSION }}"
         body: "${{ steps.get-release-notes.outputs.RELEASE_NOTES }}"
