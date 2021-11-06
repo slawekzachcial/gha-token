@@ -37,9 +37,12 @@ jobs:
     - name: Get Version from CHANGELOG
       id: get-release-version
       run: |
-        RELEASE_VERSION="$(grep '^## \[\d' CHANGELOG.md | head -n1 | sed -e 's/^.*\[//' -e 's/\].*$//')"
+        RELEASE_VERSION="$(cat CHANGELOG.md | grep '^## \[[0-9]' | head -n1 | sed -e 's/^.*\[//' -e 's/\].*$//')"
+        RELEASE_NOTES="$(cat CHANGELOG.md | awk 'BEGIN {st=0} /^## \[[0-9]/ {st++; next} st==1 {print $0}')"
         echo "Release Version in CHANGELOG: ${RELEASE_VERSION}"
+        [ -n "${RELEASE_VERSION}" ]
         echo "::set-output name=RELEASE_VERSION::${RELEASE_VERSION}"
+        echo "::set-output name=RELEASE_NOTES::${RELEASE_NOTES}"
 
     - name: Check Release Tag
       run: '! git rev-parse -q --verify "refs/tags/${{ steps.get-release-version.outputs.RELEASE_VERSION }}" >/dev/null'
