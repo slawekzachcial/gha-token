@@ -162,7 +162,8 @@ GOOS=darwin GOARCH=amd64 go build -o build/darwin/amd64/gha-token
 ## GitHub Actions
 
 This repository defines 2 workflows:
-- Build: Runs on each push or PR to the main branch. Lints the code, builds it
-  and runs tests.
-- Release: Triggered manually - builds and publishes GitHub release. Uses
-  latest version number and release notes from the [CHANGELOG.md](CHANGELOG.md).
+- [Build](.github/workflows/build.yml): Runs on each push or PR to the main
+  branch. Lints the code, builds it and runs tests.
+- [Release](.github/workflows/release.yml): Triggered manually - builds and
+  publishes GitHub release. Uses latest version number and release notes from the
+  [CHANGELOG.md](CHANGELOG.md).
