@@ -38,9 +38,9 @@ jobs:
         [ -n "${RELEASE_VERSION}" ]
         echo "::set-output name=RELEASE_VERSION::${RELEASE_VERSION}"
 
-    - nane: Get Release Notes from CHANGELOG
+    - name: Get Release Notes from CHANGELOG
       id: get-release-notes
-      run:
+      run: |
         RELEASE_NOTES="$(cat CHANGELOG.md | awk 'BEGIN {st=0} /^## \[[0-9]/ {st++; next} st==1 {print $0}')"
         RELEASE_NOTES="${RELEASE_NOTES//'%'/'%25'}"
         RELEASE_NOTES="${RELEASE_NOTES//$'\n'/'%0A'}"
