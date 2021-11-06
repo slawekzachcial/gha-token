@@ -51,6 +51,8 @@ jobs:
         GOOS=darwin GOARCH=amd64 go build -o build/darwin/gha-token
         tar -c -C build/darwin -f build/gha-token_${{ steps.get-release-version.outputs.RELEASE_VERSION }}_darwin_amd64.tar.gz gha-token
 
+    - run: echo "${{ steps.get-release-version.outputs.RELEASE_NOTES }}"
+
     - name: Publish Release
       uses: ncipollo/release-action@v1
       with:
