@@ -54,11 +54,13 @@ jobs:
 
     - name: Create Release Artifacts
       run: |
-        mkdir -p build/darwin build/linux
+        mkdir -p build/darwin build/linux build/windows
         GOOS=linux GOARCH=amd64 go build -o build/linux/gha-token
         tar -c -C build/linux -f build/gha-token_${{ steps.get-release-version.outputs.RELEASE_VERSION }}_linux_amd64.tar.gz gha-token
         GOOS=darwin GOARCH=amd64 go build -o build/darwin/gha-token
         tar -c -C build/darwin -f build/gha-token_${{ steps.get-release-version.outputs.RELEASE_VERSION }}_darwin_amd64.tar.gz gha-token
+        GOOS=windows GOARCH=amd64 go build -o build/windows/gha-token.exe
+        zip -j -q build/gha-token_${{ steps.get-release-version.outputs.RELEASE_VERSION }}_windows_amd64.zip build/windows/gha-token.exe
 
     - name: Create Release Tag
       uses: actions/github-script@v3
@@ -75,7 +77,7 @@ jobs:
     - name: Publish Release
       uses: ncipollo/release-action@v1
       with:
-        artifacts: "build/*.tar.gz"
+        artifacts: "build/*.tar.gz,build/*.zip"
         name: "${{ steps.get-release-version.outputs.RELEASE_VERSION }}"
         body: "${{ steps.get-release-notes.outputs.RELEASE_NOTES }}"
         tag: "${{ steps.get-release-version.outputs.RELEASE_VERSION }}"

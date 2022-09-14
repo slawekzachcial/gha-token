@@ -33,7 +33,7 @@ curl -i -H "Authorization: token ${TOKEN}" https://api.github.com/repos/me/myrep
 ## Releases
 
 Looking for pre-built binaries? You can find them on the [Releases](https://github.com/slawekzachcial/gha-token/releases)
-page. Currently 64-bit Linux and MacOS are available.
+page. Currently 64-bit Linux, MacOS and Windows are available.
 
 ## Generating JWT Tokens
 
@@ -157,6 +157,7 @@ To build for multiple platforms:
 mkdir -p build
 GOOS=linux GOARCH=amd64 go build -o build/linux/amd64/gha-token
 GOOS=darwin GOARCH=amd64 go build -o build/darwin/amd64/gha-token
+GOOS=windows GOARCH=amd64 go build -o build/windows/amd64/gha-token
 ```
 
 ## GitHub Actions
