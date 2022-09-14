@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	logger "log"
 	"net/http"
 	"net/http/httputil"
@@ -103,7 +103,7 @@ func parseFlags() config {
 }
 
 func getJwtToken(appID string, keyPath string, expSecs int) (string, error) {
-	keyBytes, err := ioutil.ReadFile(keyPath)
+	keyBytes, err := os.ReadFile(keyPath)
 	if err != nil {
 		return "", err
 	}
@@ -175,7 +175,7 @@ func httpJSON(method string, url string, authorization string, result interface{
 		return fmt.Errorf("Expected HTTP status code 2xx but got %d", resp.StatusCode)
 	}
 
-	respData, err := ioutil.ReadAll(resp.Body)
+	respData, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
